@@ -1,0 +1,8 @@
+[wordpress]
+192.168.86.142 ansible_user=mclayton
+
+[wordpress:vars]
+mariadb_root_password=wordpress
+mariadb_database_name=wordpress
+mariadb_user=wordpress
+mariadb_password=wordpress
