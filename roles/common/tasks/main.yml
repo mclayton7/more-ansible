@@ -1,4 +1,7 @@
 ---
+- name: Populate service facts
+  service_facts:
+
 - name: Enable EPEL repository
   become: yes
   package:
@@ -19,13 +22,15 @@
       - cockpit-podman
       - tmux
       - podman
+      - htop
     state: present
 
-- name: Enable cockpit and podman
+- name: Enable cockpit
   ansible.builtin.service:
     name: "{{ item }}"
     enabled: yes
     state: started
   loop:
-    - podman
-    - cockpit
+    - cockpit.service
+  when:
+    - "ansible_facts.services[item]['status'] != 'enabled' or ansible_facts.services[item]['state'] != 'started'"

@@ -7,31 +7,74 @@
   stat: path=/usr/bin/gitlab-ctl
   register: gitlab_file
 
-  # Install GitLab and its dependencies.
+- name: Gather the package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Check if GitLab Yum Repo exists
+  stat: path=/etc/yum.repos.d/gitlab_gitlab-ce.repo
+  register: gitlab_repo_exists
+
+- name: debug information
+  ansible.builtin.debug:
+    var: gitlab_repo_exists
+    verbosity: 1
+
+- name: debug information
+  ansible.builtin.debug:
+    var: ansible_facts.packages
+    verbosity: 1
+
+- meta: end_play
+
+# Based on https://about.gitlab.com/install/#centos-7
 - name: Install GitLab dependencies.
   package:
-    name: "{{ gitlab_dependencies }}"
+    name:
+      - curl
+      - openssh-server
+      - perl
+      - python3-policycoreutils
+      - policycoreutils
+      - git
     state: present
+
+- name: Enable http(s) ports
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop:
+    - "http"
+    - "https"
 
 - name: Download GitLab repository installation script.
   get_url:
-    url: "{{ gitlab_repository_installation_script_url }}"
+    url: "https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.rpm.sh"
     dest: /tmp/gitlab_install_repository.sh
-    validate_certs: "{{ gitlab_download_validate_certs }}"
+    validate_certs: true
   when: not gitlab_file.stat.exists
 
-- name: Define the Gitlab package name.
-  set_fact:
-    gitlab_package_name: "{{ gitlab_edition }}{{ gitlab_package_version_separator }}{{ gitlab_version }}"
-  when: gitlab_version | default(false)
+- name: Install GitLab repository.
+  command: bash /tmp/gitlab_install_repository.sh
+  register: output
+  when: not gitlab_repo_exists.stat.exists
+
+- name: Update GitLab Yum repo to target RHEL 7 since RHEL 8/9 isn't supported
+  ansible.builtin.replace:
+    path: /etc/yum.repos.d/gitlab_gitlab-ce.repo
+    regexp: 'el\/9'
+    replace: 'el/8'
+    backup: no
+  when: not gitlab_repo_exists.stat.exists
 
 - name: Install GitLab
   package:
-    name: "{{ gitlab_package_name | default(gitlab_edition) }}"
+    name: "gitlab-ce-{{ gitlab_version }}"
     state: present
-  async: 300
-  poll: 5
-  when: not gitlab_file.stat.exists
+  when: "gitlab_version not in ansible_facts.packages['gitlab-ce'].version"
+
 
 # Start and configure GitLab. Sometimes the first run fails, but after that,
 # restarts fix problems, so ignore failures on this run.
@@ -41,25 +84,9 @@
     creates=/var/opt/gitlab/bootstrapped
   failed_when: false
 
-- name: Create GitLab SSL configuration folder.
-  file:
-    path: /etc/gitlab/ssl
-    state: directory
-    owner: root
-    group: root
-    mode: 0700
-  when: gitlab_create_self_signed_cert
-
-- name: Create self-signed certificate.
-  command: >
-    openssl req -new -nodes -x509 -subj "{{ gitlab_self_signed_cert_subj }}"
-    -days 3650 -keyout {{ gitlab_ssl_certificate_key }} -out {{ gitlab_ssl_certificate }} -extensions v3_ca
-    creates={{ gitlab_ssl_certificate }}
-  when: gitlab_create_self_signed_cert
-
 - name: Copy GitLab configuration file.
   template:
-    src: "{{ gitlab_config_template }}"
+    src: "gitlab.rb.j2"
     dest: /etc/gitlab/gitlab.rb
     owner: root
     group: root

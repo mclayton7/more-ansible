@@ -1,8 +1,26 @@
 [wordpress]
-192.168.86.142 ansible_user=mclayton
+wordpress.loc ansible_user=mclayton
 
 [wordpress:vars]
+wordpress_container_version=6.1.1-php8.0-apache
+mariadb_container_version=10.10.2-jammy
+nginx_container_version=1.23.2
+mysql_backup_container_version=latest
 mariadb_root_password=wordpress
 mariadb_database_name=wordpress
 mariadb_user=wordpress
 mariadb_password=wordpress
+
+
+[gitlab]
+gitlab.loc ansible_user=mclayton
+
+[gitlab:vars]
+gitlab_version=15.6.0
+
+
+[gitlab_runners]
+gitlab-runner.loc ansible_user=mclayton
+
+[gitlab:vars]
+gitlab_version=15.5.2
