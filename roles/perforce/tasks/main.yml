@@ -1,0 +1,29 @@
+---
+# https://www.perforce.com/manuals/p4sag/Content/P4SAG/install.linux.packages.install.html
+- name: Gather the package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Check if Perforce is already installed
+  register: perforce_installed
+
+- name: Create perforce directory
+  file:
+    path: "/perforce"
+    state: directory
+    owner: root
+    group: "0"
+    recurse: yes
+    mode: g+rwx
+
+- name: Import Perforce RPM Key
+  ansible.builtin.rpm_key:
+    state: present
+    key: https://package.perforce.com/perforce.pubkey
+
+- name: Install Perforce
+  become: yes
+  package:
+    name:
+      - helix-p4d
+    state: present

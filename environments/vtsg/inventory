@@ -22,5 +22,9 @@ gitlab_version=15.6.0
 [gitlab_runners]
 gitlab-runner.loc ansible_user=mclayton
 
-[gitlab:vars]
-gitlab_version=15.5.2
+
+[perforce]
+perforce.loc ansible_user=mclayton
+
+[perforce:vars]
+perforce_version=2022.2-2369846

@@ -15,6 +15,7 @@
   with_items:
     - mysql
     - mysql-backup
+    - wordpress
     - nginx/config
     - nginx/certs
     - nginx/logs
@@ -36,7 +37,7 @@
       MYSQL_USER: "{{ mariadb_user }}"
       MYSQL_PASSWORD: "{{ mariadb_password }}"
     volumes:
-      - "/opt/mysql:/var/lib/mysql:U,Z"
+      - "/opt/mysql:/var/lib/mysql:z,U"
 
 - name: Create a container to backup mariadb
   containers.podman.podman_container:
@@ -59,12 +60,13 @@
     restart_policy: always
     network_mode: "{{ wordpress_network }}"
     ports:
-      - 80:80/tcp
+      - 8080:80/tcp
     env:
       WORDPRESS_DB_HOST: "{{ mariadb_name }}"
       WORDPRESS_DB_NAME: "{{ mariadb_database_name }}"
       WORDPRESS_DB_USER: "{{ mariadb_user }}"
       WORDPRESS_DB_PASSWORD: "{{ mariadb_password }}"
+    volumes: "/opt/wordpress:/var/www/html:z,U"
 
 - name: Copy nginx conf to remote
   template:
